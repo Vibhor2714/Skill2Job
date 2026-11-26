@@ -1,0 +1,57 @@
+name: Cross-Platform CI (Windows & macOS)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest httpx email-validator
+
+      - name: Python compilation check
+        working-directory: backend
+        run: python -m compileall -q app
+
+      - name: Run backend test suite
+        working-directory: backend
+        run: python -m pytest tests/ -v
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Frontend production build
+        working-directory: frontend
+        run: npm run build
